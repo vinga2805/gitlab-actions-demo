@@ -31,7 +31,7 @@ jobs:
         with:
           java-version: '8'
       - name: Run Build # Compile your code and run all tests on it.
-        run: mvn clean install
+        run: mvn clean install --file app/pom.xml
 
 
 # Stage 2
@@ -70,7 +70,7 @@ jobs:
         env:
           CONTAINER_NAME: tekion
         run: |
-          mvn clean install jibDockerBuild
+          mvn clean install --file app/pom.xml jibDockerBuild
           CONTAINER_REPO="$ECR_REGISTRY/$CONTAINER_NAME"
           docker tag $CONTAINER_NAME $CONTAINER_REPO:$DOCKER_IMAGE_TAG && \
           docker push $CONTAINER_REPO:$DOCKER_IMAGE_TAG
