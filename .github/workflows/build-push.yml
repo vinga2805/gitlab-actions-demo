@@ -46,7 +46,7 @@ jobs:
       ECR_REGISTRY: 677149389801.dkr.ecr.ap-south-1.amazonaws.com # ECR Registry to which the image will be pushed
 
     steps:
-      - uses: rlespinasse/github-slug-action@master
+      - uses: rlespinasse/github-slug-action@v3.x
       - name: Set Image Tag as Environment Variable
         run: echo ::set-env name=DOCKER_IMAGE_TAG::$(echo "rc-$GITHUB_SHA_SHORT")
       - uses: actions/checkout@v1
