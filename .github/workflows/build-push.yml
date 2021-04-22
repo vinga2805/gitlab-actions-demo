@@ -1,0 +1,80 @@
+name: Service build and push to ECR
+
+# Runs on creation and update of pull requests for all branches and on a push to master
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+env:
+# This is to specify specific build time properties
+  GITHUB_USER: ${{ secrets.CI_GITHUB_USER }}
+  GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+
+jobs:
+#  Stage 1
+  build:
+    name: Build all services
+    runs-on: ubuntu-latest
+
+    if: github.ref != 'refs/heads/master'
+
+#   Use this block if you need a specific service while building your project.
+
+    env:
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v1 # Checks out the code and puts you in root
+      - uses: actions/setup-java@v1 # Setting up JVM with version 11, specify whatever version is required.
+        with:
+          java-version: '8'
+      - name: Run Build # Compile your code and run all tests on it.
+        run: mvn clean install --file app/pom.xml
+
+
+# Stage 2
+  push:
+    name: Package all services and push them to ECR
+    runs-on: ubuntu-latest
+
+#   Run this stage only if the branch is master. Prevents deployments from branches other than master.
+    if: github.ref == 'refs/heads/master'
+
+    env:
+      ECR_REGISTRY: 677149389801.dkr.ecr.ap-south-1.amazonaws.com # ECR Registry to which the image will be pushed
+
+    steps:
+      - uses: rlespinasse/github-slug-action@master
+      - name: Set Image Tag as Environment Variable
+        run: echo ::set-env name=DOCKER_IMAGE_TAG::$(echo "rc-$GITHUB_SHA_SHORT")
+      - uses: actions/checkout@v1
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '8'
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.0.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Needs the access key and id to be stored in github secrets for security
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1.0.1
+        with:
+          registries: "677149389801" # Registry name to log in to
+
+      - name: Tag and Push Payment service
+        env:
+          CONTAINER_NAME: tekion
+        run: |
+          mvn clean install --file app/pom.xml jibDockerBuild
+          CONTAINER_REPO="$ECR_REGISTRY/$CONTAINER_NAME"
+          docker tag $CONTAINER_NAME $CONTAINER_REPO:$DOCKER_IMAGE_TAG && \
+          docker push $CONTAINER_REPO:$DOCKER_IMAGE_TAG
+
+      - name: Logout of Amazon ECR
+        if: always()
+        run: docker logout $ECR_REGISTRY
