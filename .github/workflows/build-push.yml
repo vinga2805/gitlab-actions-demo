@@ -31,7 +31,9 @@ jobs:
         with:
           java-version: '8'
       - name: Run Build # Compile your code and run all tests on it.
-        run: mvn clean install --file app/pom.xml
+        run: |
+          mvn clean install --file app/pom.xml
+          docker build -t tekion:latest -f ./app/Dockerfile
 
 
 # Stage 2
@@ -55,14 +57,14 @@ jobs:
           java-version: '8'
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1.0.1
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Needs the access key and id to be stored in github secrets for security
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1.0.1
+        uses: aws-actions/amazon-ecr-login@v1
         with:
           registries: "677149389801" # Registry name to log in to
 
@@ -70,9 +72,9 @@ jobs:
         env:
           CONTAINER_NAME: tekion
         run: |
-          mvn clean install --file app/pom.xml jibDockerBuild
+          mvn clean install --file app/pom.xml
           CONTAINER_REPO="$ECR_REGISTRY/$CONTAINER_NAME"
-          docker tag $CONTAINER_NAME $CONTAINER_REPO:${{ env.DOCKER_IMAGE_TAG }} && \
+          docker build -t $CONTAINER_REPO:${{ env.DOCKER_IMAGE_TAG }} -f ./app/Dockerfile
           docker push $CONTAINER_REPO:${{ env.DOCKER_IMAGE_TAG }}
 
       - name: Logout of Amazon ECR
