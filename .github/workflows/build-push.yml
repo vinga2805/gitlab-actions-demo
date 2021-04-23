@@ -46,9 +46,9 @@ jobs:
       ECR_REGISTRY: 677149389801.dkr.ecr.ap-south-1.amazonaws.com # ECR Registry to which the image will be pushed
 
     steps:
-      - uses: rlespinasse/github-slug-action@v2.x
+      - uses: rlespinasse/github-slug-action@v3.x
       - name: Set Image Tag as Environment Variable
-        run: echo ::set-env name=DOCKER_IMAGE_TAG::$(echo "rc-$GITHUB_SHA_SHORT")
+        run: echo "DOCKER_IMAGE_TAG=rc-$GITHUB_SHA_SHORT" >> $GITHUB_ENV
       - uses: actions/checkout@v1
       - uses: actions/setup-java@v1
         with:
@@ -72,8 +72,8 @@ jobs:
         run: |
           mvn clean install --file app/pom.xml jibDockerBuild
           CONTAINER_REPO="$ECR_REGISTRY/$CONTAINER_NAME"
-          docker tag $CONTAINER_NAME $CONTAINER_REPO:$DOCKER_IMAGE_TAG && \
-          docker push $CONTAINER_REPO:$DOCKER_IMAGE_TAG
+          docker tag $CONTAINER_NAME $CONTAINER_REPO:${{ env.DOCKER_IMAGE_TAG }} && \
+          docker push $CONTAINER_REPO:${{ env.DOCKER_IMAGE_TAG }}
 
       - name: Logout of Amazon ECR
         if: always()
